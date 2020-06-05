@@ -1,0 +1,7 @@
+atari-py
+tensorboard
+torchvision
+pytorch-ignite
+tensorboardX
+tensorflow==2.0.0
+ptan
