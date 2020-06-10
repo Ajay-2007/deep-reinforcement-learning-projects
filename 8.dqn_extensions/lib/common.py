@@ -2,19 +2,15 @@ import datetime
 import warnings
 from datetime import timedelta
 from types import SimpleNamespace
-from typing import List
 from typing import *
 import numpy as np
 import ptan
 from ignite.metrics import RunningAverage
-from ptan import *
-import  ptan.ignite as ptan_ignite
+import ptan.ignite as ptan_ignite
 import torch
 from ignite.engine import Engine
 from ignite.contrib.handlers import tensorboard_logger as tb_logger
 from torch import nn
-from ignite import *
-
 
 SEED = 123
 
@@ -26,7 +22,7 @@ HYPERPARAMS = {
         'replay_size': 100000,
         'replay_initial': 10000,
         'target_net_sync': 1000,
-        'epsilon_frames': 10**5,
+        'epsilon_frames': 10 ** 5,
         'epsilon_start': 1.0,
         'epsilon_final': 0.02,
         'learning_rate': 0.0001,
@@ -34,32 +30,32 @@ HYPERPARAMS = {
         'batch_size': 32,
     }),
     'breakout-small': SimpleNamespace(**{
-        'env_name':         "BreakoutNoFrameskip-v4",
-        'stop_reward':      500.0,
-        'run_name':         'breakout-small',
-        'replay_size':      3*10 ** 5,
-        'replay_initial':   20000,
-        'target_net_sync':  1000,
-        'epsilon_frames':   10 ** 6,
-        'epsilon_start':    1.0,
-        'epsilon_final':    0.1,
-        'learning_rate':    0.0001,
-        'gamma':            0.99,
-        'batch_size':       64
+        'env_name': "BreakoutNoFrameskip-v4",
+        'stop_reward': 500.0,
+        'run_name': 'breakout-small',
+        'replay_size': 3 * 10 ** 5,
+        'replay_initial': 20000,
+        'target_net_sync': 1000,
+        'epsilon_frames': 10 ** 6,
+        'epsilon_start': 1.0,
+        'epsilon_final': 0.1,
+        'learning_rate': 0.0001,
+        'gamma': 0.99,
+        'batch_size': 64
     }),
     'breakout': SimpleNamespace(**{
-        'env_name':         "BreakoutNoFrameskip-v4",
-        'stop_reward':      500.0,
-        'run_name':         'breakout',
-        'replay_size':      10 ** 6,
-        'replay_initial':   50000,
-        'target_net_sync':  10000,
-        'epsilon_frames':   10 ** 6,
-        'epsilon_start':    1.0,
-        'epsilon_final':    0.1,
-        'learning_rate':    0.00025,
-        'gamma':            0.99,
-        'batch_size':       32
+        'env_name': "BreakoutNoFrameskip-v4",
+        'stop_reward': 500.0,
+        'run_name': 'breakout',
+        'replay_size': 10 ** 6,
+        'replay_initial': 50000,
+        'target_net_sync': 10000,
+        'epsilon_frames': 10 ** 6,
+        'epsilon_start': 1.0,
+        'epsilon_final': 0.1,
+        'learning_rate': 0.00025,
+        'gamma': 0.99,
+        'batch_size': 32
     }),
     'invaders': SimpleNamespace(**{
         'env_name': "SpaceInvadersNoFrameskip-v4",
@@ -120,11 +116,11 @@ def calc_loss_dqn(batch, net, tgt_net, gamma, device='cpu'):
 
     return nn.MSELoss()(state_action_vals, bellman_vals)
 
+
 class EpsilonTracker:
     def __init__(self,
                  selector: ptan.actions.EpsilonGreedyActionSelector,
                  params: SimpleNamespace):
-
         self.selector = selector
         self.params = params
         self.frame(0)
@@ -133,12 +129,14 @@ class EpsilonTracker:
         eps = self.params.epsilon_start - frame_idx / self.params.epsilon_frames
         self.selector.epsilon = max(self.params.epsilon_final, eps)
 
+
 def batch_generator(buffer: ptan.experience.ExperienceReplayBuffer,
                     initial: int, batch_size: int):
     buffer.populate(initial)
     while True:
         buffer.populate(1)
         yield buffer.sample(batch_size)
+
 
 @torch.no_grad()
 def calc_values_of_states(states, net, device='cpu'):
@@ -149,6 +147,7 @@ def calc_values_of_states(states, net, device='cpu'):
         best_action_values_v = action_values_v.max(1)[0]
         mean_vals.append(best_action_values_v.mean().item())
     return np.mean(mean_vals)
+
 
 def setup_ignite(engine: Engine, params: SimpleNamespace,
                  exp_source, run_name: str,
@@ -165,7 +164,7 @@ def setup_ignite(engine: Engine, params: SimpleNamespace,
     @engine.on(ptan_ignite.EpisodeEvents.EPISODE_COMPLETED)
     def episode_completed(trainer: Engine):
         passed = trainer.state.metrics.get('time_passed', 0)
-        print('Episode %d: reward=%0.f, steps=%s, speed=%.1f f/s, elapsed=%s' %(
+        print('Episode %d: reward=%0.f, steps=%s, speed=%.1f f/s, elapsed=%s' % (
             trainer.state.episode,
             trainer.state.episode_reward,
             trainer.state.episode_steps,
@@ -176,7 +175,7 @@ def setup_ignite(engine: Engine, params: SimpleNamespace,
     @engine.on(ptan_ignite.EpisodeEvents.BOUND_REWARD_REACHED)
     def game_solved(trainer: Engine):
         passed = trainer.state.metrics['time_passed']
-        print('Game solved in %s, after %d episodes, and %d iterations' %(
+        print('Game solved in %s, after %d episodes, and %d iterations' % (
             timedelta(seconds=int(passed)),
             trainer.state.episode,
             trainer.state.iteration
@@ -198,7 +197,6 @@ def setup_ignite(engine: Engine, params: SimpleNamespace,
         event = ptan_ignite.EpisodeEvents.EPISODE_COMPLETED
         tb.attach(engine, log_handler=handler, event_name=event)
 
-
         # write to tensorboard every 100 iterations
         ptan_ignite.PeriodEvents().attach(engine)
         metrics = ['avg_loss', 'avg_fps']
@@ -210,15 +208,3 @@ def setup_ignite(engine: Engine, params: SimpleNamespace,
 
         event = ptan_ignite.PeriodEvents.ITERS_100_COMPLETED
         tb.attach(engine, log_handler=handler, event_name=event)
-
-
-
-
-
-
-
-
-
-
-
-

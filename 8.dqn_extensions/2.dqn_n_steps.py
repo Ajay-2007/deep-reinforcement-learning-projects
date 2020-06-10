@@ -1,21 +1,28 @@
 import gym
 import ptan
-from lib import dqn_model
-from lib import common
-from ignite.engine import Engine
+import argparse
+import random
 import torch
 import torch.optim as optim
-import argparse
-from tensorboardX import SummaryWriter
+from ignite.engine import Engine
 
-NAME = "01_baseline"
+from lib import common, dqn_model
+
+NAME = "02_n_steps"
+
+DEFAULT_N_STEPS = 4
+
+
 if __name__ == "__main__":
+    random.seed(common.SEED)
+    torch.manual_seed(common.SEED)
     params = common.HYPERPARAMS["pong"]
-
     parser = argparse.ArgumentParser()
-    parser.add_argument("--cuda", default=False, action="store_true", help="Enable cuda")
+    parser.add_argument("--cuda", default=False, action="store_true",
+                        help="Enable cuda")
+    parser.add_argument("-n", type=int, default=DEFAULT_N_STEPS,
+                        help="Steps to do on Bellman unroll")
     args = parser.parse_args()
-
     device = torch.device("cuda" if args.cuda else "cpu")
 
     env = gym.make(params.env_name)
@@ -23,15 +30,14 @@ if __name__ == "__main__":
     env.seed(common.SEED)
 
     net = dqn_model.DQN(env.observation_space.shape, env.action_space.n).to(device)
+
     tgt_net = ptan.agent.TargetNet(net)
-
     selector = ptan.actions.EpsilonGreedyActionSelector(epsilon=params.epsilon_start)
-    epsilon_tracker = common.EpsilonTracker(selector, params)
-    agent = ptan.agent.DQNAgent(net, action_selector=selector, device=device)
+    epsilon_tracker = common.EpsilonTracker(selector=selector, params=params)
+    agent = ptan.agent.DQNAgent(dqn_model=net, action_selector=selector, device=device)
 
-    exp_source = ptan.experience.ExperienceSourceFirstLast(env, agent=agent, gamma=params.gamma)
-    buffer = ptan.experience.ExperienceReplayBuffer(exp_source, buffer_size=params.replay_size)
-
+    exp_source = ptan.experience.ExperienceSourceFirstLast(env, agent, gamma=params.gamma, step_count=args.n)
+    buffer = ptan.experience.ExperienceReplayBuffer(experience_source=exp_source, buffer_size=params.replay_size)
     optimizer = optim.Adam(net.parameters(), lr=params.learning_rate)
 
 
@@ -40,9 +46,7 @@ if __name__ == "__main__":
         loss_v = common.calc_loss_dqn(batch, net, tgt_net, gamma=params.gamma, device=device)
         loss_v.backward()
         optimizer.step()
-
         epsilon_tracker.frame(engine.state.iteration)
-
         if engine.state.iteration % params.target_net_sync == 0:
             tgt_net.sync()
 
@@ -51,7 +55,20 @@ if __name__ == "__main__":
             "epsilon": selector.epsilon
         }
 
-
     engine = Engine(process_batch)
-    common.setup_ignite(engine, params, exp_source, NAME)
+    common.setup_ignite(engine, params, exp_source, f"{NAME}={args.n}")
     engine.run(common.batch_generator(buffer, params.replay_initial, params.batch_size))
+
+
+
+
+
+
+
+
+
+
+
+
+
+

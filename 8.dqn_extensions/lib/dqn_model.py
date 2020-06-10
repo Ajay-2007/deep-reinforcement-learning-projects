@@ -3,6 +3,7 @@ import torch.nn as nn
 
 import numpy as np
 
+
 class DQN(nn.Module):
     def __init__(self, input_shape, n_actions):
         super(DQN, self).__init__()
@@ -26,8 +27,7 @@ class DQN(nn.Module):
 
     def _get_conv_out(self, shape):
         o = self.conv(torch.zeros(1, *shape))
-        return int(np.prod(o.size))
-
+        return int(np.prod(o.size()))
 
     def forward(self, x):
         fx = x.float() / 256
