@@ -20,7 +20,7 @@ NAME = '2_baseline'
 
 
 def batch_generator(buffer: ptan.experience.ExperienceReplayBuffer,
-                    initial: int, batch_size: int):
+                    initial: int, batch_size: int, steps: int):
     buffer.populate(initial)
 
     while True:
@@ -45,7 +45,7 @@ if __name__ == '__main__':
     envs = []
     for _ in range(args.envs):
         env = gym.make(params.env_name)
-        env = ptan.common.wrappers(env)
+        env = ptan.common.wrappers.wrap_dqn(env)
         env.seed(common.SEED)
         envs.append(env)
 
@@ -104,8 +104,8 @@ if __name__ == '__main__':
         trainer.should_terminate = True
 
 
-    logdir = f'runs/{datetime.now().isoformat(timespec="minutes")}-{params.run_name}-{NAME}={args.envs}'
-
+    # logdir = rf'runs/{datetime.now().isoformat(timespec="minutes")}-{params.run_name}-{NAME}={args.envs}'
+    logdir = f'{params.run_name}-{NAME}-{args.envs}'
     tb = tb_logger.TensorboardLogger(log_dir=logdir)
     RunningAverage(output_transform=lambda v: v["loss"]).attach(engine, "avg_loss")
 
