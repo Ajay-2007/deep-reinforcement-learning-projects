@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import warnings
 from datetime import timedelta
 from types import SimpleNamespace
@@ -89,15 +89,13 @@ def batch_generator(buffer: ptan.experience.ExperienceReplayBuffer,
         yield buffer.sample(batch_size)
 
 
-
-
-def setup_ignite(engine: Engine, params: SimpleNamespace,
+def setup_ignite(engine: Engine,
                  exp_source, run_name: str,
                  extra_metrics: Iterable[str] = ()):
     warnings.simplefilter('ignore', category=UserWarning)
 
     handler = ptan_ignite.EndOfEpisodeHandler(
-        exp_source, bound_avg_reward=params.stop_reward
+        exp_source, subsample_end_of_episode=100
     )
 
     handler.attach(engine)
@@ -114,9 +112,8 @@ def setup_ignite(engine: Engine, params: SimpleNamespace,
             timedelta(seconds=int(passed))
         ))
 
-
     now = datetime.now().isoformat(timespec='minutes')
-    logdir = f'runs/{now}-{params.run_name}-{run_name}'
+    logdir = f'runs-{now}-{run_name}'.replace(':', '')
     tb = tb_logger.TensorboardLogger(logdir=logdir)
     run_avg = RunningAverage(output_transform=lambda v: v['loss'])
     run_avg.attach(engine, 'avg_loss')
@@ -130,7 +127,7 @@ def setup_ignite(engine: Engine, params: SimpleNamespace,
     tb.attach(engine, log_handler=handler, event_name=event)
 
     # write to tensorboard every 100 iterations
-    ptan_ignite.PeriodEvents().attach(engine)
+    ptan_ignite.PeriodicEvents().attach(engine)
     metrics = ['avg_loss', 'avg_fps']
     metrics.extend(extra_metrics)
     handler = tb_logger.OutputHandler(

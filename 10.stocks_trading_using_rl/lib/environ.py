@@ -22,11 +22,11 @@ class StocksEnv(gym.Env):
     spec = EnvSpec("StocksEnv-v0")
 
     def __init__(self, prices, bars_count=DEFAULT_BARS_COUNT, commission=DEFAULT_COMMISION_PERC,
-                 reset_on_close=True, conv_1d=False, random_ofs_on_reset=True,
+                 reset_on_close=True, state_1d=False, random_ofs_on_reset=True,
                  reward_on_close=False, volumes=False):
         assert isinstance(prices, dict)
         self._prices = prices
-        if conv_1d:
+        if state_1d:
             self._state = State1D(
                 bars_count, commission, reset_on_close, reward_on_close=reward_on_close, volumes=volumes
             )
@@ -48,7 +48,7 @@ class StocksEnv(gym.Env):
         self._instrument = self.np_random.choice(
             list(self._prices.keys())
         )
-        prices = self._prices[self.instrument]
+        prices = self._prices[self._instrument]
         bars = self._state.bars_count
         if self.random_ofs_on_reset:
             offset = self.np_random.choice(prices.high.shape[0] - bars * 10) + bars
@@ -122,7 +122,7 @@ class State:
             return 3 * self.bars_count + 1 + 1,
 
     def encode(self):
-        res = np.array(shape=self.shape, dtype=np.float32)
+        res = np.ndarray(shape=self.shape, dtype=np.float32)
         shift = 0
         for bar_idx in range(-self.bars_count + 1, 1):
             ofs = self._offset + bar_idx

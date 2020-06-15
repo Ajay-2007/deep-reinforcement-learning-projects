@@ -42,14 +42,13 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if args.cuda else "cpu")
 
-    saves_path = SAVES_DIR / f"simple-{args.run}"
+    saves_path = SAVES_DIR / f"conv1d-{args.run}"
     saves_path.mkdir(parents=True, exist_ok=True)
 
     data_path = pathlib.Path(args.data)
     val_path = pathlib.Path(args.val)
 
     if args.year is not None or data_path.is_file():
-        print("data file", data_path)
         if args.year is not None:
             stock_data = data.load_year_data(args.year)
         else:
@@ -76,9 +75,9 @@ if __name__ == "__main__":
 
     env = gym.wrappers.TimeLimit(env, max_episode_steps=1000)
     val_data = {"YNDX": data.load_relative(val_path)}
-    env_val = environ.StocksEnv(val_data, bars_count=BARS_COUNT)
+    env_val = environ.StocksEnv(val_data, bars_count=BARS_COUNT, state_1d=True)
 
-    net = models.SimpleFFDQN(env.observation_space.shape[0], env.action_space.n).to(device)
+    net = models.DQNConv1D(env.observation_space.shape, env.action_space.n).to(device)
     tgt_net = ptan.agent.TargetNet(net)
 
     selector = ptan.actions.EpsilonGreedyActionSelector(EPS_START)
@@ -109,8 +108,7 @@ if __name__ == "__main__":
 
 
     engine = Engine(process_batch)
-    tb = common.setup_ignite(engine, exp_source, f"simple-{args.run}",
-                             extra_metrics=("values_mean",))
+    tb = common.setup_ignite(engine, exp_source, f"conv1d-{args.run}", extra_metrics=("values_mean",))
 
 
     @engine.on(ptan.ignite.PeriodEvents.ITERS_1000_COMPLETED)
@@ -170,7 +168,6 @@ if __name__ == "__main__":
     tst_handler = tb_logger.OutputHandler(
         tag="test", metric_names=tst_metrics
     )
-
 
     tb.attach(engine, log_handler=tst_handler, event_name=event)
 

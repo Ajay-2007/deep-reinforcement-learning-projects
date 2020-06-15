@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 
 class NoisyLinear(nn.Linear):
-    def __init__(self, in_features, out_features, sigma_init=0.7, bias=True):
+    def __init__(self, in_features, out_features, sigma_init=0.017, bias=True):
         super(NoisyLinear, self).__init__(in_features, out_features, bias=bias)
         self.sigma_weight = nn.Parameter(torch.full((out_features, in_features), sigma_init))
         self.register_buffer("epsilon_weight", torch.zeros(out_features, in_features))
@@ -30,6 +30,7 @@ class NoisyLinear(nn.Linear):
 
         return F.linear(input, self.weight + self.sigma_weight * self.epsilon_weight, bias)
 
+
 class SimpleFFDQN(nn.Module):
     def __init__(self, obs_len, actions_n):
         super(SimpleFFDQN, self).__init__()
@@ -50,16 +51,17 @@ class SimpleFFDQN(nn.Module):
             nn.Linear(512, actions_n)
         )
 
-        def forward(self, x):
-            val = self.fc_val(x)
-            adv = self.fc_adv(x)
+    def forward(self, x):
+        val = self.fc_val(x)
+        adv = self.fc_adv(x)
 
-            return val + (adv - adv.mean(dim=1, keepdim=True))
+        return val + (adv - adv.mean(dim=1, keepdim=True))
+
 
 class DQNConv1D(nn.Module):
     def __init__(self, shape, actions_n):
         super(DQNConv1D, self).__init__()
-
+        print("debugging", shape)
         self.conv = nn.Sequential(
             nn.Conv1d(shape[0], 128, 5),
             nn.ReLU(),
@@ -81,28 +83,14 @@ class DQNConv1D(nn.Module):
             nn.Linear(512, actions_n)
         )
 
-        def forward(self, x):
-            conv_out = self.conv(x).view(x.size()[0], -1)
-            val = self.fc_val(conv_out)
-            adv = self.fc_adv(conv_out)
+    def _get_conv_out(self, shape):
+        o = self.conv(torch.zeros(1, *shape))
+        print("debugging", o)
+        return int(np.prod(o.size()))
 
-            return val + (adv - adv.mean(dim=1, keepdim=True))
+    def forward(self, x):
+        conv_out = self.conv(x).view(x.size()[0], -1)
+        val = self.fc_val(conv_out)
+        adv = self.fc_adv(conv_out)
 
-
-        def _get_conv_out(self, shape):
-            o = self.conv(torch.zeros(1, *shape))
-            return int(np.prod(o.size()))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        return val + (adv - adv.mean(dim=1, keepdim=True))
