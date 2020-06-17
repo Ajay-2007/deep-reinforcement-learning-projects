@@ -14,8 +14,8 @@ import torch.multiprocessing as mp
 from lib import common
 
 GAMMA = 0.99
-LEARNING_RATE = 0.001
-ENTROPY_BETA = 0.01
+LEARNING_RATE = 0.002
+ENTROPY_BETA = 0.02
 
 REWARD_STEPS = 4
 CLIP_GRAD = 0.1
