@@ -171,4 +171,4 @@ def seq_bleu(model_out, ref_seq):
     model_seq = torch.max(model_out.data, dim=1)[1]
     model_seq = model_seq.cpu().numpy()
 
-    return utils.calc_blue(model_seq, ref_seq)
+    return utils.calc_bleu(model_seq, ref_seq)

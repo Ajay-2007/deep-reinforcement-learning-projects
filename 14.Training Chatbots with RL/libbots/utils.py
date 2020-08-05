@@ -10,7 +10,7 @@ def calc_bleu_many(cand_seq, ref_sequences):
                                     weights=(0.5, 0.5))
 
 
-def calc_blue(cand_seq, ref_seq):
+def calc_bleu(cand_seq, ref_seq):
     return calc_bleu_many(cand_seq, [ref_seq])
 
 
