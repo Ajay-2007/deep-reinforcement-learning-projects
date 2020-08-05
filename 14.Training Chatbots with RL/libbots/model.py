@@ -142,3 +142,33 @@ def pack_batch_no_out(batch, embeddings, device="cpu"):
     )
 
     return emb_input_seq, input_idx, output_idx
+
+
+def pack_input(input_data, embeddings, device="cpu"):
+    input_v = torch.LongTensor([input_data]).to(device)
+    r = embeddings(input_v)
+
+    return rnn_utils.pack_padded_sequence(
+        r, [len(input_data)], batch_first=True
+    )
+
+
+def pack_batch(batch, embeddings, device="cpu"):
+    emb_input_seq, input_idx, output_idx = pack_batch_no_out(
+        batch, embeddings, device
+    )
+
+    # prepare output sequences, with end token stripped
+    output_seq_list = []
+    for out in output_idx:
+        s = pack_input(out[:-1], embeddings, device)
+        output_seq_list.append(s)
+
+    return emb_input_seq, output_seq_list, input_idx, output_idx
+
+
+def seq_bleu(model_out, ref_seq):
+    model_seq = torch.max(model_out.data, dim=1)[1]
+    model_seq = model_seq.cpu().numpy()
+
+    return utils.calc_blue(model_seq, ref_seq)
