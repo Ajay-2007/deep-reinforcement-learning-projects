@@ -1,6 +1,6 @@
 atari-py==0.2.6
 gym==0.15.3
-numpy==1.17.2
+numpy==1.22.0
 opencv-python==4.1.1.26
 tensorboard==2.0.1
 torch==1.3.0
